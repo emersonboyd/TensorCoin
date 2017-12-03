@@ -1,0 +1,5 @@
+1. Pull Previous Bitcoin Data Either through downloading a .csv or through an API
+
+2. Set up an RNN with TensorFlow
+
+3. Measure the accuracy of our predictions
