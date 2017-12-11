@@ -8,7 +8,7 @@ import matplotlib
 from sklearn import linear_model
 
 
-FINAL_START_DATE = datetime.datetime(2010, 1, 1)
+FINAL_START_DATE = datetime.datetime(2017, 1, 1)
 FINAL_END_DATE = datetime.datetime.now()
 
 
@@ -79,6 +79,23 @@ def predict_prices(df, label, dates_to_predict):
     return predicted_price
 
 
+def plot_model(df, label):
+    model = get_model(df, label)
+
+    dates_to_train = df.index.values
+    prices_to_train = df.loc[:, label].as_matrix()
+
+    # fit the x and y to n_samples x 1
+    dates_to_train = np.reshape(dates_to_train, (len(dates_to_train), 1))
+    prices_to_train = np.reshape(prices_to_train, (len(prices_to_train), 1))
+
+    plt.scatter(dates_to_train, prices_to_train, color='green')  # plotting the initial datapoints
+    plt.plot(dates_to_train, model.predict(dates_to_train), color='blue', linewidth=3)  # plotting the line made by linear regression
+    plt.show()
+
+    return
+
+
 start = FINAL_START_DATE
 end = FINAL_END_DATE
 ndaq_df = web.DataReader("NDAQ", 'yahoo', start, end)
@@ -94,6 +111,8 @@ ndaq_df.index = ndaq_df.index.map(date_to_number)
 ndaq_df_mean_20.index = ndaq_df_mean_20.index.map(date_to_number)
 
 print predict_prices(ndaq_df_mean_20, 'Open', date_to_number(FINAL_END_DATE))
+
+plot_model(ndaq_df_mean_20, 'Open')
 #
 # ndaq_df.plot(y='Open')
 # plt.show()
