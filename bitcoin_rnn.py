@@ -47,7 +47,8 @@ def segment_data(df, range_unit, start_units_back, end_units_back, segment_units
     training = prices[start_index:end_index]
     testing = prices[end_index:]
     testVal = prices[end_index]
-    return training, testing,testVal
+    prev_week = prices[end_index-(24*7):end_index]
+    return training, testing,testVal,prev_week
 
 
 def train_data(input, output, MODEL_NAME):
@@ -76,18 +77,19 @@ def train_data(input, output, MODEL_NAME):
     # Compile RNN, optomizers can be RMSprop,SGD,Adam
     # regressor.compile(optimizer='adam', loss='mean_squared_error')
     # regressor.compile(optimizer='sgd', loss='mean_squared_error')
-    regressor.compile(optimizer='adam', loss='mean_squared_error')
+    regressor.compile(optimizer='sgd', loss='mean_squared_error')
 
     # Fit Model. Change Batch size and epochs
     regressor.fit(input, output, batch_size=20, epochs=100)
 
     # Save the model to file for future use
-    return regressor
     regressor.save(MODEL_NAME)
+    return regressor
 
 
 # Display the results
 def draw_data(df_test, predicted_price, unit, xlabel, title):
+    pdb.set_trace()
     # df_test_vals = np.ndarray.tolist(df_test.values)
     # predictions = []
     # pdb.set_trace()
@@ -131,9 +133,9 @@ def run():
     create_model = True
     run_through_all = False
     segment_unit = 'hour'
-    MODEL_NAME = 'adam_sigmoid.h5'
+    MODEL_NAME = 'models/50_days_sigmoid_sgd.h5'
     PULL_MODEL = 'standard.h5'
-    df_train, df_test,test_val = segment_data(df, 'day', 360, 1, segment_unit)
+    df_train, df_test,test_val,prev = segment_data(df, 'day', 50, 1, segment_unit)
 
     sc = MinMaxScaler()
     # Reshape the data to create a model
@@ -163,20 +165,22 @@ def run():
         test_input = sc.transform(test_input)
         test_input = np.reshape(test_input, (len(test_input), 1, 1))
         prices = list()
+        actual = list()
+        actual.append(test_val)
         prices.append(test_val)
         prev = test_input
-        for i in range(0,len(df_test.values)):
+        for i in range(0,len(df_test.values)-1):
             predicted_price = sc.inverse_transform(regressor.predict(prev, batch_size=1))
             predicted_price = predicted_price.item(i)
             prices.append(predicted_price)
-            prev = np.array(prices)
+            actual.append(df_test.values.item(i+1))
+            prev = np.array(actual)
             prev = np.reshape(prev, (len(prev), 1))
             prev = sc.transform(prev)
             prev = np.reshape(prev, (len(prev), 1, 1))
         print prices
 
-        pdb.set_trace()
-        draw_data(df_test, np.array(prices), 'hour', 'Time', 'Baseline Model 364 days of hourly training')
+        draw_data(df_test, np.array(prices[1:]), 'hour', 'Time', 'Baseline Model 364 days of hourly training')
     else:
         for file in MODELS:
             regressor = load_model(file)
