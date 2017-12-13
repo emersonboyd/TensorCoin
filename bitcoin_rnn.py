@@ -68,13 +68,15 @@ def train_data(input, output,MODEL_NAME):
     #regressor.add(LSTM(units=4, activation='sigmoid', input_shape=(None, 1),dropout=.05))
     #regressor.add(SimpleRNN(units=4, activation='sigmoid', input_shape=(None, 1)))
     regressor.add(LSTM(units=4, activation='sigmoid', input_shape=(None, 1)))
-    regressor.add(Dense(units=1))
+    regressor.add(Dense(1))
 
     #Compile RNN, optomizers can be RMSprop,SGD,Adam
-    regressor.compile(optimizer='adam', loss='mean_squared_error')
+    # regressor.compile(optimizer='adam', loss='mean_squared_error')
+    #regressor.compile(optimizer='sgd', loss='mean_squared_error')
+    regressor.compile(optimizer='RMSprop', loss='mean_squared_error')
 
     #Fit Model. Change Batch size and epochs
-    regressor.fit(input, output, batch_size=20, epochs=200)
+    regressor.fit(input, output, batch_size=20, epochs=100)
 
     #Save the model to file for future use
     regressor.save(MODEL_NAME)
@@ -95,6 +97,7 @@ def draw_data(df_test, predicted_price,unit,xlabel,title):
     plt.title(title, fontsize=40)
     plt.plot(df_test.values, color='red', label='Real BTC Price')
     plt.plot(predicted_price, color='blue', label='Predicted BTC Price')
+    # plt.plot(difference,color='green',label='Difference')
     df_test = df_test.reset_index()
     plt.xticks(df_test.index, df_test[unit], rotation='vertical')
     ax = plt.gca()
@@ -106,7 +109,6 @@ def draw_data(df_test, predicted_price,unit,xlabel,title):
     plt.ylabel('BTC Price(USD)', fontsize=40)
     plt.legend(loc=2, prop={'size': 25})
     plt.show()
-    pdb.set_trace()
 
 
 def run():
@@ -124,10 +126,11 @@ def run():
               '365_days_to_1_day_in_hours_batch_20_200_epochs.h5']  # SGD optimation
     df = read_data()
     create_model = True
+    run_through_all = False
     segment_unit = 'hour'
-    MODEL_NAME = '365_days_to_1_day_in_hours_batch_20_200_epochs.h5'
-    PULL_MODEL = '365_days_to_1_day_in_hours.h5'
-    df_train, df_test = segment_data(df, 'day', 365, 1, segment_unit)
+    MODEL_NAME = 'test.h5'
+    PULL_MODEL = '365_days_to_1_day_in_hours_2_new_layers_dropout_05.h5'
+    df_train, df_test = segment_data(df, 'hour', 365,1, segment_unit)
 
     sc = MinMaxScaler()
     # Reshape the data to create a model
@@ -143,13 +146,23 @@ def run():
     else:
         regressor = load_model(PULL_MODEL)
 
-    #Get the data to predict
-    test_input = np.reshape(df_test.values, (len(df_test.values), 1))
-    test_input = sc.transform(test_input)
-    test_input = np.reshape(test_input, (len(test_input), 1, 1))
-    predicted_price = sc.inverse_transform(regressor.predict(test_input,batch_size=1))
+    if not run_through_all:
+        #Get the data to predict
+        test_input = np.reshape(df_test.values, (len(df_test.values), 1))
+        test_input = sc.transform(test_input)
+        test_input = np.reshape(test_input, (len(test_input), 1, 1))
+        predicted_price = sc.inverse_transform(regressor.predict(test_input,batch_size=1))
 
-    draw_data(df_test, predicted_price,'hour','Time','Baseline Model 364 days of hourly training')
+        draw_data(df_test, predicted_price,'hour','Time','Baseline Model 364 days of hourly training')
+    else:
+        for file in MODELS:
+            regressor = load_model(file)
+            test_input = np.reshape(df_test.values, (len(df_test.values), 1))
+            test_input = sc.transform(test_input)
+            test_input = np.reshape(test_input, (len(test_input), 1, 1))
+            predicted_price = sc.inverse_transform(regressor.predict(test_input, batch_size=1))
+
+            draw_data(df_test, predicted_price, 'hour', 'Time', file)
 
 if __name__ == "__main__":
     run()
