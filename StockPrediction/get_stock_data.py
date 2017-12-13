@@ -7,6 +7,13 @@ import matplotlib.pyplot as plt
 import matplotlib
 from sklearn import linear_model
 from sklearn.model_selection import train_test_split
+from sklearn import ensemble
+from sklearn import svm
+from sklearn import isotonic
+from sklearn import kernel_ridge
+from sklearn import cross_decomposition
+from sklearn import gaussian_process
+from sklearn import metrics
 
 
 FINAL_START_DATE = datetime.datetime(2017, 1, 1)
@@ -18,6 +25,7 @@ def read_data():
     csv_name = 'coinbaseUSD_1-min_data_2014-12-01_to_2017-10-20.csv.csv'
     df = pd.read_csv(''.join([csv_folder, csv_name]))
     df['date'] = pd.to_datetime(df['Timestamp'], unit='s').dt.date
+    prices_by_date = df
     prices_by_date = df.groupby('date')['Weighted_Price'].mean()
     # prices_by_date = prices_by_date.set_index('date')
     return prices_by_date
@@ -26,6 +34,11 @@ def read_data():
 def split_df(df, percent_train):
     num_train = int(percent_train * len(df))
     return df[:num_train], df[num_train:]
+
+
+def drop_df_fraction(df, percent_drop):
+    start_df, end_df = split_df(df, percent_drop)
+    return end_df
 
 
 def fill_missing_dates(df):
@@ -74,7 +87,8 @@ def number_to_date(num):
 
 
 def get_model(series, label):
-    model = linear_model.LinearRegression() #defining the linear regression model
+    model = linear_model.LinearRegression()
+    # model = ensemble.RandomForestRegressor()
 
     dates_to_train = series.index.values
     prices_to_train = series.as_matrix()
@@ -83,8 +97,9 @@ def get_model(series, label):
     dates_to_train = np.reshape(dates_to_train, (len(dates_to_train), 1))
     prices_to_train = np.reshape(prices_to_train, (len(prices_to_train), 1))
 
-    model.fit(dates_to_train, prices_to_train) #fitting the data points in the model
+    prices_to_train = prices_to_train.ravel().astype(int)
 
+    model.fit(dates_to_train, prices_to_train) #fitting the data points in the model
     return model
 
 
@@ -115,6 +130,8 @@ def plot_model(series_train, series_test, label):
     dates_to_train = np.reshape(dates_to_train, (len(dates_to_train), 1))
     prices_to_train = np.reshape(prices_to_train, (len(prices_to_train), 1))
 
+    print 'Mean Squared Error', metrics.mean_squared_error(prices_to_test_against, model.predict(dates_to_predict))
+
     plt.scatter(dates_to_train, prices_to_train, color='green')  # plotting the initial datapoints
     plt.scatter(dates_to_predict, prices_to_test_against, color='red')  # plotting the test datapoints
     plt.plot(dates_to_predict, model.predict(dates_to_predict), color='blue', linewidth=3)  # plotting the line made by linear regression
@@ -143,7 +160,9 @@ def plot_model(series_train, series_test, label):
 
 series_coin = read_data()
 
-series_coin_train, series_coin_test = split_df(series_coin, .9)
+series_coin = drop_df_fraction(series_coin, .8)
+
+series_coin_train, series_coin_test = split_df(series_coin, .7)
 
 plot_model(series_coin_train, series_coin_test, 'Weighted_Price')
 
