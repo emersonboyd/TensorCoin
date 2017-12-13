@@ -5,9 +5,10 @@ from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
-from keras.layers import RNN
+from keras.layers import SimpleRNN
 from keras.layers import GRU
 from keras.models import load_model
+from keras.layers.merge import concatenate
 import pdb
 
 # Get the Bitcoin data from the csv file
@@ -59,20 +60,21 @@ def train_data(input, output,MODEL_NAME):
     #Testing Inputs
     regressor = Sequential()
 
-
     #ADD Layers to the RNN
     #LSTM: dropout, units,
-    regressor.add(LSTM(units=8, activation='sigmoid', input_shape=(None, 1)))
-    #Dense
+    # regressor.add(LSTM(units=8, activation='sigmoid', input_shape=(None, 1)))
+    # regressor.add(LSTM(units=16, activation='sigmoid', input_shape=(None, 1)))
+    # regressor.add(LSTM(units=4, activation='sigmoid', input_shape=(None, 1), dropout=.2))
+    #regressor.add(LSTM(units=4, activation='sigmoid', input_shape=(None, 1),dropout=.05))
+    #regressor.add(SimpleRNN(units=4, activation='sigmoid', input_shape=(None, 1)))
+    regressor.add(LSTM(units=4, activation='sigmoid', input_shape=(None, 1)))
     regressor.add(Dense(units=1))
-    #RNN
-    #regressor.add(RNN(units=1))
 
-    #Compile RNN, optomizers can be RMSprop
+    #Compile RNN, optomizers can be RMSprop,SGD,Adam
     regressor.compile(optimizer='adam', loss='mean_squared_error')
 
     #Fit Model. Change Batch size and epochs
-    regressor.fit(input, output, batch_size=5, epochs=100)
+    regressor.fit(input, output, batch_size=20, epochs=200)
 
     #Save the model to file for future use
     regressor.save(MODEL_NAME)
@@ -87,7 +89,7 @@ def draw_data(df_test, predicted_price,unit,xlabel,title):
     for item in predicted_price:
         predictions.append(item[0])
     difference = np.subtract(df_test_vals, predictions)
-    avg_off = sum(difference)/float(len(difference));
+    avg_off = sum(difference)/float(len(difference))
     print avg_off
     plt.figure(figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
     plt.title(title, fontsize=40)
@@ -108,10 +110,22 @@ def draw_data(df_test, predicted_price,unit,xlabel,title):
 
 
 def run():
+    MODELS = ['365_days_to_1_day_in_hours.h5',#Original 4 LSTMS
+              '365_days_to_1_day_in_hours_2_new_layers_16_lstms.h5',#16 LSTMS
+              '365_days_to_1_day_in_hours_2_new_layers_dropout_05.h5',#5% Dropout
+              '365_days_to_1_day_in_hours_2_new_layers_dropout_2.h5',#%20% Dropout
+              '365_days_to_1_day_in_hours_8_lstms.h5',#8 LSTMS
+              '365_days_to_1_day_in_hours_8_tanh.h5',#8 TANH activation LSTM
+              '365_days_to_1_day_in_hours_rnn.h5',#SimpleRNN
+              '365_days_to_1_day_in_hours_tanh.h5',#4 TANH activations LSTMs
+              '365_days_to_1_day_in_hours_RMSprop.h5',#RMSprop optimation
+              '365_days_to_1_day_in_hours_SGD.h5',
+              '365_days_to_1_day_in_hours_batch_10.h5',
+              '365_days_to_1_day_in_hours_batch_20_200_epochs.h5']  # SGD optimation
     df = read_data()
     create_model = True
     segment_unit = 'hour'
-    MODEL_NAME = '365_days_to_1_day_in_hours_2_new_layers.h5'
+    MODEL_NAME = '365_days_to_1_day_in_hours_batch_20_200_epochs.h5'
     PULL_MODEL = '365_days_to_1_day_in_hours.h5'
     df_train, df_test = segment_data(df, 'day', 365, 1, segment_unit)
 
