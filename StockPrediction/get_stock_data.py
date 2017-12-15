@@ -14,6 +14,7 @@ from sklearn import kernel_ridge
 from sklearn import cross_decomposition
 from sklearn import gaussian_process
 from sklearn import metrics
+import math
 
 
 FINAL_START_DATE = datetime.datetime(2017, 1, 1)
@@ -83,7 +84,7 @@ def date_to_number(date):
 
 
 def number_to_date(num):
-    return datetime.datetime.fromtimestamp(num)
+    return datetime.datetime.fromtimestamp(num).date()
 
 
 def get_model(series, label):
@@ -130,11 +131,28 @@ def plot_model(series_train, series_test, label):
     dates_to_train = np.reshape(dates_to_train, (len(dates_to_train), 1))
     prices_to_train = np.reshape(prices_to_train, (len(prices_to_train), 1))
 
-    print 'Mean Squared Error', metrics.mean_squared_error(prices_to_test_against, model.predict(dates_to_predict))
+    mse = metrics.mean_squared_error(prices_to_test_against, model.predict(dates_to_predict))
+    rmse = math.sqrt(mse)
+    print 'Root Mean Square Error', rmse
 
-    plt.scatter(dates_to_train, prices_to_train, color='green')  # plotting the initial datapoints
-    plt.scatter(dates_to_predict, prices_to_test_against, color='red')  # plotting the test datapoints
-    plt.plot(dates_to_predict, model.predict(dates_to_predict), color='blue', linewidth=3)  # plotting the line made by linear regression
+    plt.figure(figsize=(15, 15), dpi=80, facecolor='w', edgecolor='k')
+    plt.title('Linear Regression Model', fontsize=40)
+
+    map_func = np.vectorize(number_to_date)
+    dates_to_predict_as_date = map_func(dates_to_predict)
+    dates_to_train_as_date = map_func(dates_to_train)
+
+    print dates_to_predict_as_date
+    print dates_to_train_as_date
+
+    # plt.scatter(dates_to_train, prices_to_train, color='green')  # plotting the initial datapoints
+    plt.scatter(dates_to_predict_as_date, prices_to_test_against, color='red', label='Real BTC Price')  # plotting the test datapoints
+    plt.plot(dates_to_predict_as_date, model.predict(dates_to_predict), color='blue', linewidth=2, label='Predicted BTC Price')  # plotting the line made by linear regression
+
+    plt.xlabel('Dates', fontsize=40)
+    plt.ylabel('BTC Price(USD)', fontsize=40)
+    plt.legend(loc=2, prop={'size': 25})
+
     plt.show()
 
     return
